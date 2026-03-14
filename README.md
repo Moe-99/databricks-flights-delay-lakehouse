@@ -14,6 +14,8 @@ The pipeline is fully **orchestrated and automated using Databricks Jobs**, allo
 
 # Architecture
 
+<img width="788" height="571" alt="Flight-delay-lakehouse-architecture drawio" src="https://github.com/user-attachments/assets/f3990518-5040-4637-9743-8880e87a132c" />
+
 
 The pipeline follows a **Medallion Architecture (Bronze → Silver → Gold)**.
 
