@@ -201,7 +201,6 @@ Two workflows were implemented.
 
 ## Hourly Pipeline
 
-![flight_delay_hourly_pipeline.png](https://github.com/Moe-99/databricks-flights-delay-lakehouse/blob/master/flight_delay_hourly_pipeline.png)
 
 Runs every hour.
 
