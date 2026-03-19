@@ -59,11 +59,12 @@ def main():
         "end_date": target_date,
         "hourly": "temperature_2m,precipitation,wind_speed_10m",
         "timezone": "UTC"}
-        payload = fetch_weather_data(lat,lon,target_date)
+        payload = fetch_weather_data(lat,lon,params)
         records = to_bronze_record(payload,airport,lat,lon,params)
         rows.append(records)
 
     store(rows)
+main()
 
      
 
