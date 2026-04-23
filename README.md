@@ -2,13 +2,14 @@
 
 ## Overview
 
-This project builds a **modern data engineering pipeline using Databricks and Delta Lake** to analyze flight delays and their relationship with weather conditions.
+Flight delays cost airlines and passengers billions annually. This project explores whether weather conditions can predict delay patterns , built as a production-style lakehouse pipeline on Databricks.
+This project builds a modern data engineering pipeline using Databricks and Delta Lake to analyze flight delays and their relationship with weather conditions.
 
-The system ingests data from multiple sources, processes it through a **Bronze–Silver–Gold Lakehouse architecture**, and produces analytical tables designed for reporting and decision-making.
+The system ingests data from multiple sources, processes it through a Bronze–Silver–Gold Lakehouse architecture, and produces analytical tables designed for reporting and decision-making.
 
-The pipeline integrates **flight data, weather data, and airport metadata**, enabling analysis of flight delays across airports, airlines, and environmental conditions.
+The pipeline integrates flight data, weather data, and airport metadata, enabling analysis of flight delays across airports, airlines, and environmental conditions.
 
-The pipeline is fully **orchestrated and automated using Databricks Jobs**, allowing scheduled ingestion and transformation workflows.
+The pipeline is fully orchestrated and automated using Databricks Jobs, allowing scheduled ingestion and transformation workflows.
 
 ---
 
@@ -178,6 +179,8 @@ Metrics per **flight number per day**:
 
 `gold_flight_weather_enriched`
 
+<img width="885" height="280" alt="Image" src="https://github.com/user-attachments/assets/4df2e817-62a2-479c-8a64-89682dbbf352" />
+
 Flight records enriched with weather conditions at departure time.
 
 Includes:
@@ -200,10 +203,11 @@ Two workflows were implemented.
 ---
 
 ## Hourly Pipeline
-
-![flight_delay_hourly_pipeline.png](https://github.com/Moe-99/databricks-flights-delay-lakehouse/blob/master/flight_delay_hourly_pipeline.png)
+<img width="629" height="408" alt="Image" src="https://github.com/user-attachments/assets/b334dd79-9cee-4532-87b9-381472bdd072" />
 
 Runs every hour.
+### DAG diagram
+<img width="799" height="329" alt="Image" src="https://github.com/user-attachments/assets/2634bc88-52f8-4867-98ac-d674f6b9d5c4" />
 
 ### Tasks
 
@@ -218,11 +222,11 @@ Runs every hour.
 ---
 
 ## Daily Pipeline
-
-![daily_historical_alignment.png](https://github.com/Moe-99/databricks-flights-delay-lakehouse/blob/master/daily_historical_alignment.png)
+<img width="646" height="407" alt="Image" src="https://github.com/user-attachments/assets/43fe0bd8-666d-49f0-a8af-b6965893a6b9" />
 
 Runs once per day.
-
+### DAG diagram
+<img width="1124" height="183" alt="Image" src="https://github.com/user-attachments/assets/ce8138ab-1e3d-4bbb-9a45-cbdbec48350d" />
 ### Tasks
 
 1. Historical weather ingestion

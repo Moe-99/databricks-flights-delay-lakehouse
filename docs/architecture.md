@@ -1,14 +1,16 @@
-# Flight Delay Lakehouse Architecture
+# Flight Delay & Weather Analytics Platform
 
 <img width="788" height="571" alt="Flight-delay-lakehouse-architecture drawio" src="https://github.com/user-attachments/assets/f3990518-5040-4637-9743-8880e87a132c" />
 
 ## Architecture Overview
 
-This project implements an end-to-end Databricks Lakehouse pipeline using the Medallion architecture (Bronze → Silver → Gold) to process flight and weather data.
+This project is an end-to-end data platform built on Databricks using the Medallion architecture (Bronze → Silver → Gold).
 
-The system ingests data from external APIs and open datasets, stores raw data in Delta tables, transforms it into structured datasets using PySpark, and produces analytical datasets for reporting.
+It started as a simple API ingestion pipeline, but was expanded into a full workflow that includes ingestion, transformation, modeling, orchestration, and a dashboard layer.
 
-The pipeline is orchestrated using Databricks Jobs, enabling automated data ingestion and transformation workflows.
+Data is pulled from external APIs, stored as raw Delta tables, transformed using PySpark, and then aggregated into analytical tables used for reporting.
+
+The pipeline is scheduled using Databricks Jobs, so everything runs automatically without manual execution.
 
 ## System Components
 
@@ -18,9 +20,12 @@ The pipeline consists of four major components:
 
 - Data Ingestion
 
-- Medallion Data Layers
+- Medallion Data Layers (Bronze, Silver, Gold)
 
 - Orchestration & Scheduling
+
+- Consumption layer (dashboard)
+
 
 ## Data Sources
 
@@ -116,6 +121,8 @@ Transformations performed in this layer include:
 
 - Standardizing column names
 
+- Handling null / empty values
+
 - Converting timestamps
 
 ## Basic data validation
@@ -142,69 +149,94 @@ Examples of analytical datasets include:
 
 - airline delay performance
 
+- flight-level delay metrics
+
 - enriched flight records combined with weather data
 
 These datasets are primarily created using SQL transformations.
 
+This is also where business logic is defined, for example:
+
+- what counts as a delayed flight
+
+- how delay rates are calculated
+
+- how weather is joined to flights
+
 ## Orchestration and Automation
 
-The pipeline is orchestrated using Databricks Jobs, which automate execution of the ingestion and transformation workflows.
+The pipeline is orchestrated using Databricks Jobs.
 
-Two job pipelines are implemented:
+Instead of one large job, the workflow is split into separate pipelines based on responsibility.
 
-Hourly Pipeline
+### Flights Pipeline
+Runs every 12 hours.
 
-Runs every hour to process operational data.
+Handles:
 
-### Tasks include:
+- flight API ingestion
 
-- Flight API ingestion
-
-- Weather forecast ingestion
-
-- Silver layer transformations
+- Silver flights transformation
 
 - Gold delay summary tables
 
-### Daily Historical Pipeline
+The schedule was chosen to avoid API rate limits.
 
-Runs once per day to align weather data with historical flight records.
+### Weather Pipeline
+Runs once per day.
 
-Tasks include:
+Handles:
 
-- Historical weather ingestion
+- forecast ingestion
+
+- recent historical ingestion
 
 - Silver weather transformation
 
-- Flight-weather enrichment table
+- Gold flight-weather enrichment
 
-### Scheduling
+### Archive Backfill Pipeline (Manual)
+Used for historical weather backfills.
 
-The pipelines are scheduled using Databricks job scheduling:
+This job is not scheduled and is triggered manually when needed.
 
-- Hourly pipeline: runs every hour
+After backfill:
 
-- Daily pipeline: runs once per day
+- Silver weather is rebuilt
 
-This ensures the system continuously ingests new data while maintaining historical alignment between flight and weather datasets.
+- Gold enrichment tables are refreshed
+
+## Consumption Layer – Dashboard
+The final layer of the pipeline is the analytics dashboard, built using Databricks SQL.
+
+This layer consumes Gold tables and presents the data in a format suitable for analysis.
+
+The dashboard includes:
+
+- KPI metrics (total flights, delay rate, on-time rate)
+
+- Delay breakdown by airline and airport
+
+- Weather impact analysis (wind and precipitation)
+
+- Flight volume trends over time
 
 ## Storage Layer
+All data is stored using Delta Lake.
 
-All datasets are stored using Delta Lake, which provides:
+This provides:
 
 - ACID transactions
 
-- schema enforcement
+- Schema enforcement
 
-- scalable storage
+- Scalable storage
 
-- time travel capabilities
+- Reliable overwrite operations
 
-- Delta tables enable reliable incremental processing within the lakehouse architecture.
+Bronze acts as the source of truth, while Silver and Gold are rebuilt from it as needed.
 
 ## Technology Stack
-
-The project uses the following technologies:
 
 - Databricks Lakehouse
 
@@ -216,18 +248,23 @@ The project uses the following technologies:
 
 - REST APIs
 
-- Databricks Jobs (Orchestration)
+- Databricks Jobs (Workflows)
 
 ## Summary
+This project demonstrates a complete data workflow, from ingestion to analytics.
 
-This architecture demonstrates a scalable lakehouse pipeline capable of:
+It covers:
 
-- ingesting external API data
+- API-based data ingestion
 
-- transforming semi-structured data
+- Handling semi-structured data
 
-- building analytical datasets
+- Layered transformations (Bronze → Silver → Gold)
 
-- orchestrating automated workflows
+- Building analytical datasets
 
-The design follows modern data engineering best practices by combining the Medallion architecture, Delta Lake storage, and Databricks orchestration tools.
+- Orchestrating scheduled pipelines
+
+- Exposing results through a dashboard
+
+The focus was on building something practical and explainable, while working within real-world constraints like API rate limits.
