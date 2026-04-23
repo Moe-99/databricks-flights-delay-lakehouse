@@ -1,9 +1,11 @@
-# Flight Delay Lakehouse Pipeline (Databricks)
-
+# **Flight Delay & Weather Analytics Platform**
 ## Overview
 
-Flight delays cost airlines and passengers billions annually. This project explores whether weather conditions can predict delay patterns , built as a production-style lakehouse pipeline on Databricks.
-This project builds a modern data engineering pipeline using Databricks and Delta Lake to analyze flight delays and their relationship with weather conditions.
+Flight delays cost airlines and passengers billions each year. This project explores whether weather conditions have a measurable impact on flight delays.
+
+Instead of just analyzing a dataset, I built a full end-to-end data platform on Databricks to ingest, process, and analyze flight and weather data.
+
+The pipeline follows a lakehouse architecture (Bronze → Silver → Gold) and is fully orchestrated using scheduled workflows. The final output is a dashboard that allows analysis of delays across airlines, airports, and weather conditions.
 
 The system ingests data from multiple sources, processes it through a Bronze–Silver–Gold Lakehouse architecture, and produces analytical tables designed for reporting and decision-making.
 
@@ -12,228 +14,240 @@ The pipeline integrates flight data, weather data, and airport metadata, enablin
 The pipeline is fully orchestrated and automated using Databricks Jobs, allowing scheduled ingestion and transformation workflows.
 
 ---
+## What this project does
+- Ingests flight, weather, and airport data from external sources
 
-# Architecture
+- Processes raw API data into structured datasets using PySpark
+
+- Builds analytical tables using SQL
+
+- Enriches flight records with weather conditions
+
+- Runs automatically using Databricks Jobs
+
+- Exposes results through a dashboard
+
+## Architecture
 
 <img width="788" height="571" alt="Flight-delay-lakehouse-architecture drawio" src="https://github.com/user-attachments/assets/f3990518-5040-4637-9743-8880e87a132c" />
 
 
 The pipeline follows a **Medallion Architecture (Bronze → Silver → Gold)**.
 
+- Bronze → raw ingestion
 
-Automation and orchestration are implemented using **Databricks Jobs with scheduled workflows**.
+- Silver → cleaned and structured data
 
----
+- Gold → analytics-ready tables
 
-# Data Sources
-
-## Flights API
-**Source:** AviationStack API  
-
-Provides:
-
-- flight identifiers
-- airline information
-- departure and arrival timestamps
-- delay metrics
+- Dashboard → consumption layer
 
 ---
 
-## Weather API
-**Source:** Open-Meteo API  
-
+## Data Sources
+Flights API (AviationStack)
 Provides:
 
-- hourly weather observations
-- air temperature
-- precipitation
-- wind speed
+- Flight identifiers
 
-Weather data is retrieved **per airport coordinates** to align with flight departure times.
+- Airline information
+
+- Departure / arrival timestamps
+
+- Delay metrics
+
+⚠️ Note: The API has strict rate limits, so ingestion was scheduled every 12 hours.
+
+---
+
+## Weather API (Open-Meteo)
+Provides hourly data:
+
+- Temperature
+
+- Precipitation
+
+- Wind speed
+
+- Used to align weather conditions with flight departure times.
 
 ---
 
 ## Airports Dataset
+- CSV dataset providing:
 
-**Source:** Open airport dataset (CSV)
+- Airport metadata
 
-Provides:
+- Geographic coordinates
 
-- airport name
-- country
-- geographic coordinates
-- IATA airport codes
+- IATA codes
 
 ---
 
-# Lakehouse Data Model
+## Airport Selection Strategy
+The pipeline does not use all airports.
 
-## Bronze Layer – Raw Data
+Instead, a filtered subset of **50** European airports is used.
 
-Purpose: **Store raw ingested data with minimal transformation**
+Selection criteria:
 
-### Tables
+- Continent = Europe
 
-| Table | Description |
-|------|-------------|
-| `bronze_flights_raw` | Raw flight API responses stored as JSON |
-| `bronze_weather_raw` | Raw weather API responses |
-| `bronze_airports_raw` | Raw airport CSV dataset |
+- IATA code present
 
-### Characteristics
+- Airport type = medium or large
 
-- Raw JSON preserved for traceability
-- Ingestion metadata added (`run_id`, `ingested_at`, `source`)
-- Append-only ingestion
-- No transformations applied
+This was done to:
 
----
+- Reduce API usage
 
-## Silver Layer – Clean & Structured Data
+- Stay within rate limits
 
-Purpose: **Transform raw data into structured datasets**
+- Keep the dataset meaningful
 
-### Transformations
+- Ensure consistent results across runs
+
+## Data Model
+Bronze Layer (Raw)
+Stores raw API responses with minimal transformation.
+
+Tables:
+
+- ronze_flights_raw
+
+- bronze_weather_raw
+
+- bronze_airports_raw
+
+## Silver Layer (Structured)
+Transforms raw data into usable tables.
+
+Tables:
+
+- silver_flights
+
+- silver_weather_hourly
+
+- silver_airports
+
+Main transformations:
 
 - JSON parsing
-- exploding nested JSON structures
-- timestamp normalization
-- column standardization
-- basic data quality validation
 
-### Tables
+- Flattening nested fields
 
-| Table | Description |
-|------|-------------|
-| `silver_flights` | Structured flight records |
-| `silver_weather_hourly` | Hourly weather observations per airport |
-| `silver_airports` | Clean airport metadata |
+- Exploding weather arrays
 
-### Example Transformation
+- Timestamp normalization
 
-Weather API responses contain **arrays of hourly values**.  
-These arrays were **zipped and exploded** using PySpark to create **one row per hour per airport**.
+## Gold Layer (Analytics)
+Analytics-ready datasets used by the dashboard.
 
----
+Tables:
 
-## Gold Layer – Analytics Ready Tables
+- gold_airport_delay_summary
 
-Purpose: **Provide business-ready aggregated datasets**
+- gold_airline_delay_summary
 
-### Tables
+- gold_flight_delay_summary
 
-| Table | Description |
-|------|-------------|
-| `gold_airport_delay_summary` | Flight delay metrics per airport per day |
-| `gold_airline_delay_summary` | Delay metrics per airline |
-| `gold_flight_delay_summary` | Delay metrics per flight number |
-| `gold_flight_weather_enriched` | Flights enriched with weather conditions |
+- gold_flight_weather_enriched
 
----
+## Flight + Weather Enrichment
+The main dataset joins flights with weather:
 
-### Airport Delay Summary
+ON dep_airport_iata = airport_iata
+AND date_trunc('hour', dep_scheduled_ts) = weather_ts
+This allows analysis of how weather conditions relate to delays.
 
-`gold_airport_delay_summary`
+## Dashboard (Consumption Layer)
+The final output is a Databricks SQL dashboard.
 
-Metrics:
+It includes:
 
-- total flights
-- delayed flights
-- average departure delay
-- on-time rate
-- delay rate
+- KPI overview (total flights, delay rate, on-time rate)
 
-This table is enriched with **airport metadata** (name and country).
+- Delay breakdown by airline and airport
 
----
+- Weather impact analysis
 
-### Airline Delay Summary
+- Flight volume trends over time
 
-`gold_airline_delay_summary`
+## Orchestration
+The pipeline is automated using Databricks Workflows.
 
-Metrics:
+Each pipeline is broken into tasks with clear dependencies, allowing ingestion and transformations to run in the correct order.
 
-- total flights
-- delayed flights
-- average delay
-- on-time rate
+Flights pipeline:
+DAG:
 
-Provides insights into **airline operational performance**.
+<img width="607" height="279" alt="Screenshot 2026-04-23 184733" src="https://github.com/user-attachments/assets/71479aa4-63da-423a-adc3-7d6d09c079cd" />
 
----
+Weather pipeline:
+DAG:
 
-### Flight Delay Summary
+<img width="620" height="202" alt="Screenshot 2026-04-23 184857" src="https://github.com/user-attachments/assets/be598a06-3a26-48af-87ae-20e5113f1467" />
 
-`gold_flight_delay_summary`
+Archive backfill
+DAG:
 
-Metrics per **flight number per day**:
+<img width="615" height="133" alt="Screenshot 2026-04-23 184957" src="https://github.com/user-attachments/assets/0ce5e9b5-7b03-4d95-9016-933abc401292" />
 
-- total flights
-- delayed flights
-- average delay
-- on-time percentage
+## Flights Pipeline
+- Runs every 12 hours:
 
----
+- Flight ingestion
 
-### Flight Weather Enrichment
+- Silver transformations
 
-`gold_flight_weather_enriched`
+- Gold summaries
 
-<img width="885" height="280" alt="Image" src="https://github.com/user-attachments/assets/4df2e817-62a2-479c-8a64-89682dbbf352" />
+## Weather Pipeline
+Runs daily:
 
-Flight records enriched with weather conditions at departure time.
+- Forecast ingestion
 
-Includes:
+- Historical ingestion
 
-- air temperature
-- precipitation
-- wind speed
-- weather observation timestamp
+- Enrichment updates
 
-This table enables analysis of **weather impact on flight delays**.
+## Backfill (Manual)
+Used to load historical weather data when needed.# Lakehouse Data Model
 
----
+## Technologies Used
+- Databricks Lakehouse
 
-# Orchestration & Automation
+- PySpark
 
-The pipeline is orchestrated using **Databricks Jobs**.
+- SQL
 
-Two workflows were implemented.
+- Delta Lake
 
----
+- REST APIs
 
-## Hourly Pipeline
-<img width="629" height="408" alt="Image" src="https://github.com/user-attachments/assets/b334dd79-9cee-4532-87b9-381472bdd072" />
+- Databricks Jobs## Bronze Layer – Raw Data
 
-Runs every hour.
-### DAG diagram
-<img width="799" height="329" alt="Image" src="https://github.com/user-attachments/assets/2634bc88-52f8-4867-98ac-d674f6b9d5c4" />
+## Example Questions Answered
+- Which airports have the highest delay rates?
 
-### Tasks
+- Which airlines are most reliable?
 
-1. Flights API ingestion
-2. Weather forecast ingestion
-3. Silver flights transformation
-4. Silver weather transformation
-5. Gold airline delay summary
-6. Gold airport delay summary
-7. Gold flight delay summary
+- Does weather impact flight delays?
 
----
+- How do delays change over time?
 
-## Daily Pipeline
-<img width="646" height="407" alt="Image" src="https://github.com/user-attachments/assets/43fe0bd8-666d-49f0-a8af-b6965893a6b9" />
+## Dashboard
 
-Runs once per day.
-### DAG diagram
-<img width="1124" height="183" alt="Image" src="https://github.com/user-attachments/assets/ce8138ab-1e3d-4bbb-9a45-cbdbec48350d" />
-### Tasks
+The final output of the pipeline is a Databricks SQL dashboard.
 
-1. Historical weather ingestion
-2. Silver weather processing
-3. Gold flight weather enrichment
+It provides:
 
----
+- KPI overview (total flights, delay rate, on-time rate)
+- Delay breakdown by airline and airport
+- Weather impact analysis
+- Flight trends over time
+
+<img width="1168" height="1154" alt="screencapture-dbc-7c43730a-2968-cloud-databricks-sql-dashboardsv3-01f13d8974ba1dc78f3d8ab011b9ca33-2026-04-23-18_59_58" src="https://github.com/user-attachments/assets/d37047c6-15e8-405b-bc21-1867baa060f1" />
 
 # Technologies Used
 
@@ -249,42 +263,25 @@ Runs once per day.
 
 ---
 
-# Engineering Concepts Demonstrated
+## Challenges
+API rate limits required careful scheduling
 
-- API data ingestion
-- JSON schema parsing
-- nested data processing
-- PySpark transformations
-- SQL analytics modeling
-- Lakehouse architecture
-- incremental pipelines
-- Databricks orchestration
-- scheduled automated workflows
+aligning weather timestamps with flight data
+
+handling semi-structured JSON data
+
+keeping transformations simple while avoiding duplicates
 
 ---
 
-# Example Insights
+## Future Improvements
+richer historical flight data
 
-Using the Gold tables, analysts can answer questions such as:
+better weather categorization (heavy rain, strong wind)
 
-- Which airports experience the most flight delays?
-- Which airlines have the best on-time performance?
-- Do weather conditions correlate with flight delays?
-- How do precipitation or wind speeds impact departure delays?
+data quality monitoring
 
----
-
-# Future Improvements
-
-Possible enhancements:
-
-- weather condition bucketing analysis
-- BI dashboard integration (Power BI / Tableau)
-- data quality monitoring
-- CI/CD pipeline integration
-- Delta table partition optimization
-
----
+CI/CD for pipeline deployment
 
 ```text
 ├── notebooks/
