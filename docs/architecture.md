@@ -75,6 +75,8 @@ Airport metadata is sourced from the OurAirports open dataset, which provides in
 
 This dataset is used to enrich flight and weather data with airport metadata.
 
+A filtered subset of airports is used in the pipeline to control data volume and stay within API limits. This selection is based on region (Europe), airport type, and availability of IATA codes.
+
 ## Medallion Architecture
 
 The pipeline follows the Databricks Medallion architecture, which organizes data into progressively refined layers.
