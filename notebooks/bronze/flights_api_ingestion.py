@@ -18,7 +18,7 @@ from pyspark.sql import Row
 
 # COMMAND ----------
 
-API_KEY = "a6fbc8e27bc8c4c70342f493c04b1b0a"
+API_KEY = dbutils.secrets.get(scope="flight-api", key="aviation_key")
 BASE_URL = "https://api.aviationstack.com/v1/flights"
 SELECTED_AIRPORTS_TABLE = "dev_project.flight_delay_lakehouse.control_selected_airports"
 BRONZE_TABLE = "dev_project.flight_delay_lakehouse.bronze_flights_raw"
