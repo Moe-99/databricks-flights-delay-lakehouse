@@ -6,7 +6,56 @@ The system follows a **Medallion Architecture** consisting of Bronze, Silver, an
 
 ---
 
-# Bronze Layer (Raw Data)
+## Airport Selection Strategy
+
+The project does not use all available airports from the source dataset.
+
+Instead, a filtered subset of airports was selected to keep the pipeline realistic and manageable.
+
+### Step 1 – Candidate Airports
+
+A candidate set of airports is created from the raw airport dataset using the following filters:
+
+- continent = 'EU'
+- IATA code is not null
+- airport type in ('medium_airport', 'large_airport')
+
+This removes very small airports and ensures that only operationally relevant airports are included.
+
+Duplicates are removed based on the airport IATA code.
+
+---
+
+### Step 2 – Controlled Airport Set
+
+From the candidate set, a fixed list of 50 airports is selected.
+
+This list is stored in a separate table:
+
+- `control_selected_airports`
+
+This table acts as a control layer for the pipeline.
+
+Only these airports are used for:
+
+- flight ingestion
+- weather ingestion
+- downstream transformations
+
+---
+
+### Why this approach?
+
+Using a controlled airport list helps:
+
+- avoid unnecessary API calls
+- stay within API rate limits
+- keep the dataset consistent across runs
+- make analysis more focused and meaningful
+
+This also makes the pipeline easier to debug and reproduce.
+
+## Bronze Layer (Raw Data)
 
 The Bronze layer stores **raw ingested data** from external sources with minimal transformation.
 
@@ -26,7 +75,7 @@ Key characteristics:
 
 ---
 
-# Silver Layer (Clean & Structured Data)
+## Silver Layer (Clean & Structured Data)
 
 The Silver layer contains **cleaned, normalized, and structured datasets** derived from Bronze tables.
 
@@ -59,6 +108,10 @@ Example structure:
 | dep_delay_minutes | Departure delay in minutes |
 | ingested_at | Data ingestion timestamp |
 
+Table sample:
+
+<img width="679" height="382" alt="Screenshot 2026-04-23 180901" src="https://github.com/user-attachments/assets/949b9be0-d64d-4ea4-a54f-3181fd1e1f1e" />
+
 ---
 
 ### silver_weather_hourly
@@ -72,6 +125,10 @@ Example structure:
 | wind_speed | Wind speed (km/h) |
 | weather_kind | Forecast or historical observation |
 
+Table sample:
+
+<img width="680" height="379" alt="Screenshot 2026-04-23 181125" src="https://github.com/user-attachments/assets/24bdacfe-0092-4436-9f8e-5eb5a75adb52" />
+
 ---
 
 ### silver_airports
@@ -84,9 +141,13 @@ Example structure:
 | latitude | Latitude coordinate |
 | longitude | Longitude coordinate |
 
+Table sample:
+
+<img width="683" height="380" alt="Screenshot 2026-04-23 181255" src="https://github.com/user-attachments/assets/c196e719-8d3b-4a5f-af16-6d7ad608ff1c" />
+
 ---
 
-# Gold Layer (Analytics Tables)
+## Gold Layer (Analytics Tables)
 
 The Gold layer contains **aggregated and business-ready tables** optimized for analytics and reporting.
 
@@ -99,7 +160,7 @@ The Gold layer contains **aggregated and business-ready tables** optimized for a
 
 ---
 
-# Example Data Integration
+## Example Data Integration
 
 The `gold_flight_weather_enriched` table combines flight data with weather conditions at the time of departure.
 
@@ -113,6 +174,10 @@ AND date_trunc('hour', dep_scheduled_ts) = weather.weather_ts
 
 ![weather_enrichment_data_model.png](https://github.com/Moe-99/databricks-flights-delay-lakehouse/blob/master/diagrams/weather_enrichment_data_model.png)
 
+Table sample:
+
+<img width="680" height="380" alt="Screenshot 2026-04-23 181656" src="https://github.com/user-attachments/assets/20013655-f829-43b8-96af-42f646d70f0e" />
+
 
 This produces a dataset where each flight record contains:
 
@@ -122,7 +187,7 @@ This produces a dataset where each flight record contains:
 
 ---
 
-# Fact and Dimension Tables
+## Fact and Dimension Tables
 
 The model follows a **fact-dimension pattern**.
 
@@ -160,7 +225,7 @@ gold_flight_weather_enriched | one row per flight |
 
 ---
 
-# Summary
+## Summary
 
 This data model enables analysis of:
 
